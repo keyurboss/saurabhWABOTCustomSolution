@@ -1,0 +1,50 @@
+{
+  "name": "custom-whatsapp-file-sending",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/custom-whatsapp-file-sending/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/custom-whatsapp-file-sending",
+        "main": "apps/custom-whatsapp-file-sending/src/main.ts",
+        "tsConfig": "apps/custom-whatsapp-file-sending/tsconfig.app.json",
+        "assets": ["apps/custom-whatsapp-file-sending/src/assets"],
+        "isolatedConfig": true,
+        "webpackConfig": "apps/custom-whatsapp-file-sending/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "custom-whatsapp-file-sending:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "custom-whatsapp-file-sending:build:development"
+        },
+        "production": {
+          "buildTarget": "custom-whatsapp-file-sending:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/custom-whatsapp-file-sending/**/*.ts"]
+      }
+    }
+  },
+  "tags": []
+}
