@@ -1,10 +1,21 @@
-import * as BAIL from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
+import * as BAIL from '@whiskeysockets/baileys';
+import { existsSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import * as pin from 'pino';
 import { readFile, utils } from 'xlsx';
-import { join } from 'path';
-import { existsSync, writeFileSync } from 'fs';
 const AnyNonNumbers = /\D/g;
+
+
+
+const Message = `We're asking for a little favor. 
+Let's savor the moments together and put our phones away. 
+Meet and mingle with family & friends and be present with us as we celebrate.
+
+Let the celebrations begin!
+
+*❤️With love❤️*,
+*Aditi & Jay*👫`
 async function connectToWhatsApp() {
   const intputFileName = join(__dirname, './assets/data.csv');
   const WorkSBook = readFile(intputFileName);
@@ -12,6 +23,7 @@ async function connectToWhatsApp() {
   const outPutFileName = join(__dirname, 'assets', 'output.csv');
   const readedXlsxFile = utils.sheet_to_json<{
     number: string;
+    orignalName: string;
     filename: string;
   }>(WorkSBook.Sheets[WorkSBook.SheetNames[0]], {
     header: ['number', 'filename'],
@@ -57,7 +69,7 @@ async function connectToWhatsApp() {
   });
 
   sock.ev.on('messages.upsert', async (m) => {
-    // console.log('replying to', m.messages[0].key.remoteJid);
+    console.log('replying to', m.messages[0].key.remoteJid);
   });
   function AddOutPutFile(s: string) {
     writeFileSync(outPutFileName, s, {
@@ -66,28 +78,29 @@ async function connectToWhatsApp() {
   }
   async function AfterConnection() {
     // if (!existsSync(outPutFileName)) {
-      writeFileSync(outPutFileName, '');
+    writeFileSync(outPutFileName, '');
     // }
+    await createWaiting(1);
     for (const iterator of readedXlsxFile) {
       iterator.number = iterator.number
         .toString()
         .replace(AnyNonNumbers, '')
         .trim();
-      iterator.filename = iterator.filename.trim();
+      iterator.orignalName = iterator.filename.trim();
       iterator.filename = join(
         __dirname,
         'assets',
         'files',
-        `${iterator.filename}.pdf`,
+        `${iterator.orignalName}.pdf`,
       );
-      let appendString = `${iterator.number},${iterator.filename}`;
+      let appendString = `${iterator.number},${iterator.orignalName}`;
       if (iterator.number.length !== 12 || !iterator.number.startsWith('91')) {
         appendString = `${appendString},false,Please Check Number Is Invalid\n`;
         AddOutPutFile(appendString);
         continue;
       }
       if (!existsSync(iterator.filename)) {
-        appendString = `${appendString},false,File Not Found ${iterator.filename}\n`;
+        appendString = `${appendString},false,File Not Found ${iterator.orignalName}\n`;
         AddOutPutFile(appendString);
         continue;
       }
@@ -101,19 +114,35 @@ async function connectToWhatsApp() {
         AddOutPutFile(appendString);
         continue;
       }
-      await sock
-        .sendMessage('917016879936@s.whatsapp.net', {
-          text: `${iterator.number}   ${iterator.filename}`,
+     await sock
+        .sendMessage(`${iterator.number}@s.whatsapp.net`, {
+          document: {
+            url: iterator.filename,
+          },
+          fileName: iterator.orignalName.endsWith('.pdf')
+            ? iterator.orignalName
+            : `${iterator.orignalName}.pdf`,
+          caption: Message,
+          footer: iterator.number,
+          mimetype: 'application/pdf',
         })
-        .then((m) => {
-          console.log(JSON.stringify(m, undefined, 2));
+        .then(() => {
+          appendString = `${appendString},true\n`;
+          AddOutPutFile(appendString);
+          // console.log(JSON.stringify(m.message, undefined, 2));
         });
-
-        appendString = `${appendString},true\n`;
-        AddOutPutFile(appendString);
+      console.log(appendString);
+      await createWaiting(1);
     }
+    await createWaiting(5);
     process.exit(1);
   }
 }
 // run in main file
 connectToWhatsApp();
+
+function createWaiting(waitInSecond: number) {
+  return new Promise((res) => {
+    setTimeout(res, waitInSecond * 1000);
+  });
+}
